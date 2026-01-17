@@ -5,6 +5,7 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,11 +16,13 @@ public class AwsS3Config {
     private String region;
 
     @Bean
+    @ConditionalOnProperty(name = "storage.type", havingValue = "s3", matchIfMissing = true)
     public AWSCredentialsProvider awsCredentialsProvider() {
         return DefaultAWSCredentialsProviderChain.getInstance();
     }
 
     @Bean
+    @ConditionalOnProperty(name = "storage.type", havingValue = "s3", matchIfMissing = true)
     public AmazonS3 amazonS3(AWSCredentialsProvider credentialsProvider) {
         return AmazonS3ClientBuilder
             .standard()

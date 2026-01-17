@@ -7,10 +7,15 @@ import com.example.chargeback.model.ChargebackMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -22,9 +27,16 @@ public class S3Service {
     private final AmazonS3 amazonS3;
     private final ObjectMapper objectMapper;
     
+    @Value("${storage.type:s3}")
+    private String storageType;
+    
+    @Value("${storage.local.path:./data/chargebacks}")
+    private String localStoragePath;
+    
     @Value("${aws.s3.bucket-name:chargebacks}")
     private String bucketName;
 
+    @Autowired(required = false)
     public S3Service(AmazonS3 amazonS3) {
         this.amazonS3 = amazonS3;
         this.objectMapper = new ObjectMapper();
@@ -32,6 +44,18 @@ public class S3Service {
     }
 
     public void writeToS3(ChargebackMessage message) {
+        if ("local".equalsIgnoreCase(storageType)) {
+            writeToLocal(message);
+        } else {
+            writeToS3Bucket(message);
+        }
+    }
+
+    private void writeToS3Bucket(ChargebackMessage message) {
+        if (amazonS3 == null) {
+            throw new IllegalStateException("AmazonS3 client is not available. Check storage.type configuration.");
+        }
+        
         try {
             String s3Key = generateS3Key(message);
             String jsonContent = objectMapper.writeValueAsString(message);
@@ -61,6 +85,25 @@ public class S3Service {
         }
     }
 
+    private void writeToLocal(ChargebackMessage message) {
+        try {
+            String filePath = generateLocalFilePath(message);
+            String jsonContent = objectMapper.writeValueAsString(message);
+            
+            Path path = Paths.get(filePath);
+            Files.createDirectories(path.getParent());
+            Files.write(path, jsonContent.getBytes());
+            
+            log.info("Successfully wrote chargeback {} to local storage: {}", 
+                message.getChargebackId(), filePath);
+            
+        } catch (IOException e) {
+            log.error("Failed to write chargeback {} to local storage", 
+                message.getChargebackId(), e);
+            throw new RuntimeException("Failed to write to local storage", e);
+        }
+    }
+
     private String generateS3Key(ChargebackMessage message) {
         LocalDateTime timestamp = message.getTimestamp() != null 
             ? message.getTimestamp() 
@@ -78,5 +121,24 @@ public class S3Service {
         
         return String.format("year=%s/month=%s/day=%s/hour=%s/%s",
             year, month, day, hour, filename);
+    }
+
+    private String generateLocalFilePath(ChargebackMessage message) {
+        LocalDateTime timestamp = message.getTimestamp() != null 
+            ? message.getTimestamp() 
+            : LocalDateTime.now();
+        
+        String year = timestamp.format(DateTimeFormatter.ofPattern("yyyy"));
+        String month = timestamp.format(DateTimeFormatter.ofPattern("MM"));
+        String day = timestamp.format(DateTimeFormatter.ofPattern("dd"));
+        String hour = timestamp.format(DateTimeFormatter.ofPattern("HH"));
+        
+        String filename = String.format("%s_%s.json",
+            message.getChargebackId(),
+            UUID.randomUUID().toString().substring(0, 8)
+        );
+        
+        return String.format("%s/year=%s/month=%s/day=%s/hour=%s/%s",
+            localStoragePath, year, month, day, hour, filename);
     }
 }

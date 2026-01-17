@@ -13,6 +13,11 @@ kafka:
   topic:
     chargebacks: chargebacks
 
+storage:
+  type: ${STORAGE_TYPE:s3}  # Options: 's3' or 'local'
+  local:
+    path: ${STORAGE_LOCAL_PATH:./data/chargebacks}  # Local directory path for file storage
+
 aws:
   region: ${AWS_REGION:us-east-1}
   s3:

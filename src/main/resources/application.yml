@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: chargeback-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: chargeback-consumer-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      max-poll-records: 100
+
+kafka:
+  topic:
+    chargebacks: chargebacks
+
+aws:
+  region: ${AWS_REGION:us-east-1}
+  s3:
+    bucket-name: ${S3_BUCKET_NAME:chargebacks}
+
+logging:
+  level:
+    com.example.chargeback: INFO
+    org.springframework.kafka: INFO
+    com.amazonaws: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

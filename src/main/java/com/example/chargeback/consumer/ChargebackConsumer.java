@@ -1,15 +1,17 @@
 package com.example.chargeback.consumer;
 
-import com.example.chargeback.model.ChargebackMessage;
-import com.example.chargeback.service.S3Service;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
+
+import com.example.chargeback.model.ChargebackMessage;
+import com.example.chargeback.service.S3Service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
@@ -24,11 +26,20 @@ public class ChargebackConsumer {
         containerFactory = "kafkaListenerContainerFactory"
     )
     public void consume(
-        @Payload ChargebackMessage message,
+        @Payload(required = false) ChargebackMessage message,
         @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
         @Header(KafkaHeaders.OFFSET) long offset,
         Acknowledgment acknowledgment
     ) {
+        // Handle null messages (can occur when deserialization fails)
+        if (message == null) {
+            log.warn("Received null message at partition: {}, offset: {}. This may indicate a deserialization error.", 
+                partition, offset);
+            // Acknowledge to skip this record
+            acknowledgment.acknowledge();
+            return;
+        }
+        
         try {
             log.info("Received chargeback message: ID={}, TransactionID={}, Partition={}, Offset={}",
                 message.getChargebackId(),

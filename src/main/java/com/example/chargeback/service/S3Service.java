@@ -1,16 +1,5 @@
 package com.example.chargeback.service;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.example.chargeback.model.ChargebackMessage;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,13 +7,27 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.example.chargeback.model.ChargebackMessage;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 public class S3Service {
 
-    private final AmazonS3 amazonS3;
+    private final Optional<AmazonS3> amazonS3;
     private final ObjectMapper objectMapper;
     
     @Value("${storage.type:s3}")
@@ -36,8 +39,8 @@ public class S3Service {
     @Value("${aws.s3.bucket-name:chargebacks}")
     private String bucketName;
 
-    @Autowired(required = false)
-    public S3Service(AmazonS3 amazonS3) {
+    @Autowired
+    public S3Service(Optional<AmazonS3> amazonS3) {
         this.amazonS3 = amazonS3;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
@@ -52,9 +55,8 @@ public class S3Service {
     }
 
     private void writeToS3Bucket(ChargebackMessage message) {
-        if (amazonS3 == null) {
-            throw new IllegalStateException("AmazonS3 client is not available. Check storage.type configuration.");
-        }
+        AmazonS3 s3Client = amazonS3.orElseThrow(() -> 
+            new IllegalStateException("AmazonS3 client is not available. Check storage.type configuration."));
         
         try {
             String s3Key = generateS3Key(message);
@@ -74,7 +76,7 @@ public class S3Service {
                 metadata
             );
             
-            amazonS3.putObject(putObjectRequest);
+            s3Client.putObject(putObjectRequest);
             log.info("Successfully wrote chargeback {} to S3: {}", 
                 message.getChargebackId(), s3Key);
             

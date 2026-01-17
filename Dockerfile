@@ -1,12 +1,12 @@
 # Build stage
-FROM gradle:8.4-jdk17 AS build
+FROM gradle:jdk25 AS build
 WORKDIR /app
 COPY build.gradle settings.gradle ./
 COPY src ./src
 RUN gradle build -x test --no-daemon
 
 # Runtime stage
-FROM openjdk:17-slim
+FROM openjdk:27-ea-slim-trixie
 WORKDIR /app
 
 # Create non-root user

@@ -53,20 +53,11 @@ generate_chargeback_message() {
     # Array of currencies
     local currencies=("USD" "EUR" "GBP" "JPY")
     local currency=${currencies[$RANDOM % ${#currencies[@]}]}
-    
+
+    # line-delimited JSON, media type: application/x-ndjson
+    # each line is a json message
     cat <<EOF
-{
-  "transaction_id": "${transaction_id}",
-  "chargeback_id": "${chargeback_id}",
-  "amount": ${amount},
-  "currency": "${currency}",
-  "merchant_id": "${merchant_id}",
-  "reason_code": "${reason_code}",
-  "timestamp": "${timestamp}",
-  "customer_id": "${customer_id}",
-  "card_last_four": "${card_last_four}",
-  "status": "${status}"
-}
+{ "transaction_id": "${transaction_id}", "chargeback_id": "${chargeback_id}", "amount": ${amount}, "currency": "${currency}", "merchant_id": "${merchant_id}", "reason_code": "${reason_code}", "timestamp": "${timestamp}", "customer_id": "${customer_id}", "card_last_four": "${card_last_four}", "status": "${status}" }
 EOF
 }
 

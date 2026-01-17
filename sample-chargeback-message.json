@@ -1,0 +1,12 @@
+{
+  "transaction_id": "TXN-1234567890-001",
+  "chargeback_id": "CB-9876543210-001",
+  "amount": 125.50,
+  "currency": "USD",
+  "merchant_id": "MERCHANT-123",
+  "reason_code": "4855",
+  "timestamp": "2024-01-15T10:30:00",
+  "customer_id": "CUST-4567",
+  "card_last_four": "1234",
+  "status": "PENDING"
+}
